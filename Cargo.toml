@@ -1,0 +1,13 @@
+[package]
+name = "renoir-prediction"
+version = "0.1.0"
+edition = "2021"
+
+[build-dependencies]
+burn-import = "~0.15"
+
+[dependencies]
+burn = {version = "0.15", features = ["wgpu"]}
+burn-ndarray = "0.15"
+renoir = { git = "https://github.com/deib-polimi/renoir", version = "0.3.0" }
+serde = { version = "1.0", features = ["derive"] }
