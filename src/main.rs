@@ -1,11 +1,9 @@
 use renoir::prelude::*;
 mod model;
 use burn::tensor::*;
-use std::time::Instant;
 use burn_ndarray::{NdArray, NdArrayDevice};
 use model::deep_model::Model;
 use serde::{Serialize, Deserialize};
-
 
 const FITTED_LAMBDA_INCOME: f32 = 0.3026418664067109;
 const FITTED_LAMBDA_WEALTH: f32 =  0.1336735055366279;
@@ -31,7 +29,6 @@ struct Client {
 
 
 fn preprocessing(client: Client) -> Vec<f32> {
-
     let client_vec = vec![
         client.age as f32,
         client.gender as f32,
@@ -53,8 +50,6 @@ fn preprocessing(client: Client) -> Vec<f32> {
 }
 
 fn main() {
-    let start = Instant::now();
-
     // Create a device for tensor computation
     let device = NdArrayDevice::default();
 
@@ -76,7 +71,5 @@ fn main() {
         .for_each(|v| println!("Model output: {:?}", v.first().unwrap()));
     
     env.execute_blocking();
-    let duration = start.elapsed();
-    println!("Time elapsed: {:?}", duration);
 }
 
