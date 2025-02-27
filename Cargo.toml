@@ -1,7 +1,11 @@
 [package]
-name = "renoir-prediction"
+name = "renoir-inference-postgres"
 version = "0.1.0"
 edition = "2021"
+
+[features]
+default = ["tokio"]
+tokio = ["dep:tokio", "dep:futures", "tokio/net", "tokio/io-util", "tokio/time", "tokio/rt-multi-thread", "tokio/macros"]
 
 [build-dependencies]
 burn-import = "~0.15"
@@ -9,5 +13,12 @@ burn-import = "~0.15"
 [dependencies]
 burn = {version = "0.15", features = ["wgpu"]}
 burn-ndarray = "0.15"
-renoir = { git = "https://github.com/deib-polimi/renoir", version = "0.3.0" }
-serde = { version = "1.0", features = ["derive"] }
+renoir = { git = "https://github.com/deib-polimi/renoir", features = ["tokio"]}
+serde = { version = "1.0.217", features = ["derive"] }
+sqlx = { version = "0.5", features = ["postgres", "runtime-tokio-native-tls"] }
+regex = "1"
+
+postgres ={ version = " 0.19.1"}
+
+tokio = { version = "1.43.0", features = ["full"], default-features = false, optional = true }
+futures = { version = "0.3.31", optional = true }
