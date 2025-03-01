@@ -1,17 +1,14 @@
 use std::sync::mpsc;
-use regex::Regex;
 use renoir::prelude::*;
 mod model;
 use burn::tensor::*;
-use sqlx::{postgres::{PgListener, PgNotification}, FromRow};
+use sqlx::{postgres::{PgListener, PgNotification, PgPool}, Executor, FromRow, Pool, Postgres, Row};
 use burn_ndarray::{NdArray, NdArrayDevice};
 use model::deep_model::Model;
 use serde::{Serialize, Deserialize};
-use postgres::{Client as PgClient, NoTls};
-use tokio::spawn;
+use serde_json::Value;
 
 const MAX_REQUEST: i32 = 5;
-const NUM_CLIENTS: i32 = 100;
 const FITTED_LAMBDA_INCOME: f32 = 0.3026418664067109;
 const FITTED_LAMBDA_WEALTH: f32 =  0.1336735055366279;
 const SCALER_MEANS: [f32; 9] = [55.2534, 0.492, 2.5106, 0.41912250425, 7.664003606794818, 5.650795740523163, 0.3836, 0.5132, 1.7884450179129336];
@@ -40,26 +37,29 @@ struct Product {
     financial_status: f32
 }
 
-fn update_needs_get_products(prediction: f32, product: Product, database_url: &str) -> () {
+async fn update_needs_get_products(prediction: f32, product: Product, conn: Pool<Postgres>) -> () {
     // Connect to the DB
     println!("Model output for id {}: {}", product.row_id, prediction);
-    
-    let mut conn = PgClient::connect(database_url, NoTls).unwrap();
-    conn.execute(
+
+    //  &[&prediction, &product.financial_status, &product.row_id]
+    //let mut conn = PgClient::connect(database_url, NoTls).unwrap();
+    let query = format!(
         "UPDATE needs
-                SET risk_propensity = $1, financial_status = $2
-                WHERE id = $3", &[&prediction, &product.financial_status, &product.row_id]).unwrap();
+        SET risk_propensity = {}, financial_status = {}
+        WHERE id = {}", prediction, product.financial_status, product.row_id);
+    conn.execute(query.as_str()).await.unwrap();
+    
     // Retrieve products from product table
-    let products = conn.query(
+    let query = format!(
         "SELECT id_product, description 
-                FROM products
-                WHERE   
-                    (
-                        income  = $1
-                        OR accumulation = $2
-                    )
-                    AND risk <= $3", &[&product.income_investment, 
-                &product.accumulation_investment, &prediction]).unwrap();
+        FROM products
+        WHERE   
+            (
+                income = {}
+                OR accumulation = {}
+            )
+            AND risk <= {}", product.income_investment, product.accumulation_investment, prediction);
+    let products = conn.fetch_all(query.as_str()).await.unwrap();
     
     println!("Advised {} products for id={}", products.len(), product.row_id);
 
@@ -72,17 +72,14 @@ fn update_needs_get_products(prediction: f32, product: Product, database_url: &s
     
 }
 
-fn get_client(id: i32, database_url: &str) -> Client {
-    // Connect to the DB
-    let mut conn = PgClient::connect(database_url, NoTls).unwrap();
-
+async fn get_client(id: i32, conn: Pool<Postgres>) -> Client {
     // Retrieve the row through its id
-    let row = conn.query_one(
+    let query = format!(
         "SELECT id, age, gender, family_members, financial_education, 
-                    income, wealth, income_investment, accumulation_investment, client_id
-                FROM needs WHERE id = $1", 
-                &[&id]
-            ).unwrap();
+            income, wealth, income_investment, accumulation_investment, client_id
+        FROM needs 
+        WHERE id = {}", id);
+    let row = conn.fetch_one(query.as_str()).await.unwrap();
     
     // Store the result into Client
     Client { 
@@ -130,6 +127,7 @@ fn preprocessing(client: Client) -> (Product, Vec<f32>) {
     (product, client_vec)
 }
 
+
 #[tokio::main]
 async fn main() {
     let (config, _args) = RuntimeConfig::from_args();
@@ -138,6 +136,10 @@ async fn main() {
 
     let database_url = "postgres://postgres@localhost:5432/postgres";
 
+    let conn = PgPool::connect(&database_url).await.unwrap();
+    let a = conn.clone();
+    let b = conn.clone();
+
     // Start listening channel table_insert
     let mut listener= PgListener::connect(&database_url).await.unwrap();
     let _ = listener.listen("table_insert").await;  
@@ -145,11 +147,11 @@ async fn main() {
     // Load the model
     let model = Model::<NdArray<f32>>::default();
 
-    // Create a synchronous channel.
+    // Create an asynchronous channel, returning the sender/receiver halves; the receiver provides a blocking iterator
     let (sender, receiver) = mpsc::channel::<PgNotification>();
     
     // Spawn an async task to continuously receive notifications.
-    spawn(async move {
+    tokio::task::spawn(async move {
         loop {
             match listener.recv().await {
                 Ok(notification) => {
@@ -175,16 +177,15 @@ async fn main() {
             let payload = notification.payload();
 
             // Get id and client_id from the payload
-            let re = Regex::new(r#"\{"id"\s*:\s*(\d+),\s*"client_id"\s*:\s*(\d+)\}"#).unwrap();
-            let caps = re.captures(&payload).unwrap();
-            let id: i32 = caps.get(1).unwrap().as_str().parse().unwrap();
-            let client_id: i32 = caps.get(2).unwrap().as_str().parse().unwrap();
+            let payload: Value = serde_json::from_str(payload).unwrap();
+            let id = payload["id"].as_i64().unwrap() as i32;
+            let client_id: i32 = payload["client_id"].as_i64().unwrap() as i32;
 
             println!("Received notification with ID: {} and ClientID: {}", id, client_id);
 
             (id, client_id)
         })
-        .group_by(|&(_id, client_id)| client_id.clone() % NUM_CLIENTS)
+        .group_by(|&(_id, client_id)| client_id)
         .rich_map({
             let mut counter = 0;
             move |(_key, (id ,_client_id))| {
@@ -193,7 +194,7 @@ async fn main() {
         }})
         .filter(|&(_key, (counter, _id))| counter <= MAX_REQUEST)
         .drop_key()
-        .map(|(_counter, id)| get_client(id, database_url))
+        .map_async(move |(_counter, id)| get_client(id, a.clone()))
         .map(|client| preprocessing(client))
         .map(|(product, vec)| {
             let tensor = Tensor::<Backend, 2>::from_data(
@@ -208,7 +209,8 @@ async fn main() {
             (product, prediction)
         })
         .map(|(product, prediction)| (product, *prediction.to_data().to_vec::<f32>().unwrap().first().unwrap()))
-        .for_each(|(product, prediction)| update_needs_get_products(prediction, product, database_url));  
+        .map_async(move |(product, prediction)| update_needs_get_products(prediction, product,b.clone()))
+        .collect_vec();
 
     ctx.execute().await;
 }
