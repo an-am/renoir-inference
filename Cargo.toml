@@ -17,6 +17,7 @@ renoir = { git = "https://github.com/deib-polimi/renoir", features = ["tokio"]}
 serde = { version = "1.0.217", features = ["derive"] }
 sqlx = { version = "0.5", features = ["postgres", "runtime-tokio-native-tls"] }
 regex = "1"
+serde_json = { version = "*"}
 
 postgres ={ version = " 0.19.1"}
 

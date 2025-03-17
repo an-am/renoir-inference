@@ -8,6 +8,9 @@ use model::deep_model::Model;
 use serde::{Serialize, Deserialize};
 use serde_json::Value;
 
+use std::fs::File;
+use std::io::{self, Write};
+
 const MAX_REQUEST: i32 = 5;
 const FITTED_LAMBDA_INCOME: f32 = 0.3026418664067109;
 const FITTED_LAMBDA_WEALTH: f32 =  0.1336735055366279;
@@ -37,7 +40,7 @@ struct Product {
     financial_status: f32
 }
 
-async fn update_needs_get_products(prediction: f32, product: Product, conn: Pool<Postgres>) -> () {
+async fn update_needs_get_products(prediction: f32, product: Product, conn: Pool<Postgres>) -> f32 {
     // Connect to the DB
     println!("Model output for id {}: {}", product.row_id, prediction);
 
@@ -69,7 +72,7 @@ async fn update_needs_get_products(prediction: f32, product: Product, conn: Pool
 
         println!("ID: {}, description: {}", id_product, description);
     }
-    
+    prediction
 }
 
 async fn get_client(id: i32, conn: Pool<Postgres>) -> Client {
@@ -171,7 +174,10 @@ async fn main() {
     
     let notifications_iter = receiver.into_iter();
 
-    ctx.stream_iter(notifications_iter)
+    let mut prediction_vec: Vec<f32> = Vec::new();
+
+    let s = ctx.stream_iter(notifications_iter)
+        .batch_mode(BatchMode::single())
         .map(|notification|{
             // Get the notification payload
             let payload = notification.payload();
@@ -201,16 +207,19 @@ async fn main() {
                 TensorData::new(vec.clone(), [1, vec.clone().len()]), 
                 &NdArrayDevice::default());
             (product, tensor)
-            }
-        )
+        })
         .map(move |(product, tensor)| {  
             //let model = Model::<NdArray<f32>>::default();
             let prediction = model.forward(tensor);
             (product, prediction)
         })
-        .map(|(product, prediction)| (product, *prediction.to_data().to_vec::<f32>().unwrap().first().unwrap()))
+        .map(|(product, prediction)| {
+            let prediction = *prediction.to_data().to_vec::<f32>().unwrap().first().unwrap();
+            (product, prediction)
+        })
         .map_async(move |(product, prediction)| update_needs_get_products(prediction, product,b.clone()))
         .collect_vec();
 
     ctx.execute().await;
+
 }

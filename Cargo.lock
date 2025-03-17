@@ -4021,6 +4021,7 @@ dependencies = [
  "regex",
  "renoir",
  "serde",
+ "serde_json",
  "sqlx",
  "tokio",
 ]
