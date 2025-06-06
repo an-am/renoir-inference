@@ -1,5 +1,5 @@
 1) In Postgres, inserire questo trigger:
-```SQL
+```sql
 create trigger needs_insert_trigger
     after insert
     on needs
@@ -7,7 +7,7 @@ create trigger needs_insert_trigger
 execute procedure notify_needs_insert();
 ```
 e questa funzione:
-```SQL
+```sql
 create function notify_needs_insert() returns trigger
     language plpgsql
 as
