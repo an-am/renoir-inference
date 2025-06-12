@@ -1,4 +1,24 @@
-1) In Postgres, inserire questo trigger:
+1) In Postgres, creare la tabella needs:
+
+```sql
+create table needs
+(
+    id                      integer,
+    age                     integer,
+    gender                  integer,
+    family_members          integer,
+    financial_education     real,
+    risk_propensity         real,
+    income                  real,
+    wealth                  real,
+    income_investment       integer,
+    accumulation_investment integer,
+    financial_status        real,
+    client_id               integer
+);
+```
+
+2) inserire questo trigger:
 ```sql
 create trigger needs_insert_trigger
     after insert
@@ -25,5 +45,5 @@ BEGIN
 END;
 $$;
 ```
-2) Eseguire Renoir.
-3) Con ```start_table_insert(1000)``` di ```table_insert.py``` si inseriscono 1000 tuple nel db.
+3) Eseguire Renoir.
+4) Con ```start_table_insert(1000)``` di ```table_insert.py``` si inseriscono 1000 tuple nel db.
