@@ -18,6 +18,18 @@ create table needs
 );
 ```
 
+e la tabella products:
+```sql
+create table products
+(
+    id_product   integer,
+    income       integer,
+    accumulation integer,
+    risk         real,
+    description  text
+);
+```
+
 2) inserire questo trigger:
 ```sql
 create trigger needs_insert_trigger
