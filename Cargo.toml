@@ -8,26 +8,28 @@ default = ["tokio"]
 tokio = ["dep:tokio", "dep:futures", "tokio/net", "tokio/io-util", "tokio/time", "tokio/rt-multi-thread", "tokio/macros"]
 
 [build-dependencies]
-burn-import = "~0.17"
+burn-import = "0.17.1"
 
 [dependencies]
-burn = {version = "0.17", features = ["ndarray", "std"], default-features = false}
-burn-ndarray = "0.17"
-renoir = { git = "https://github.com/deib-polimi/renoir", features = ["tokio"], branch = "dev"}
-serde = { version = "1.0.217", features = ["derive"] }
-sqlx = { version = "0.5", features = ["postgres", "runtime-tokio-native-tls"] }
-regex = "1"
-serde_json = { version = "*"}
+burn = {version = "0.17.1", features = ["ndarray", "std"], default-features = false}
+burn-ndarray = "0.17.1"
+renoir = { version = "0.6", git = "https://github.com/deib-polimi/renoir", features = ["tokio"], branch = "dev"}
+# renoir = { path = "/home/user/dev/renoir", features = ["tokio"]}
+serde = { version = "1.0.219", features = ["derive"] }
+sqlx = { version = "0.8.6", features = ["postgres", "runtime-tokio-native-tls"] }
+regex = "1.11.1"
+serde_json = { version = "1.0.140"}
 
-postgres ={ version = " 0.19.1"}
+postgres ={ version = "0.19.10"}
 
 async-stream = "0.3.6"
 
 flume = "0.11.1"
 
-tokio = { version = "1.43.0", features = ["full"], default-features = false, optional = true }
-tokio-stream = "0.1"
+tokio = { version = "1.45.1", features = ["full"], default-features = false, optional = true }
+tokio-stream = "0.1.17"
 futures = { version = "0.3.31", optional = true }
-
-[patch.crates-io]
-zip = { git = "https://github.com/zip-rs/zip2.git", tag = "v2.6.1" }
+dotenvy = "0.15.7"
+tracing = "0.1.41"
+tracing-subscriber = "0.3.19"
+console-subscriber = "0.4.1"

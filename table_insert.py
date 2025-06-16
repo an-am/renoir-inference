@@ -1,21 +1,21 @@
-import psycopg2
+import psycopg
 import random
 from pandas import DataFrame
+import sys
 
 def start_table_insert(num_requests):
     db_config = {
         "dbname": "postgres",
-    #    "user": "postgres",
-    #    "password": "tony",
+        "user": "postgres",
+        "password": "localhostpostgrespass",
         "host": "localhost",
         "port": "5432"
     }
 
     # Establish connection
-    conn = psycopg2.connect("postgresql://postgres@localhost:5432/postgres")
-    conn.set_isolation_level(psycopg2.extensions.ISOLATION_LEVEL_AUTOCOMMIT)
+    conn = psycopg.connect("postgresql://postgres:localhostpostgrespass@localhost:5432/postgres")
+    # conn.set_isolation_level(psycopg.extensions.ISOLATION_LEVEL_AUTOCOMMIT)
     cursor = conn.cursor()
-
     data = []
     c_id = [i for i in range(1, 101)]
     for i in range(len(c_id)):
@@ -41,9 +41,9 @@ def start_table_insert(num_requests):
 
         query = f"""INSERT INTO Needs (id, age, gender, family_members, financial_education,
                                         income, wealth, income_investment, accumulation_investment, financial_status, client_id)
-                          VALUES 
-                          (
-                            (SELECT MAX(ID)+1 FROM Needs), 
+                        VALUES 
+                        (
+                            (SELECT COALESCE(MAX(ID), 0) + 1 FROM Needs), 
                             {row['age']}, 
                             {row['gender']}, 
                             {row['family_members']},
@@ -54,9 +54,15 @@ def start_table_insert(num_requests):
                             {row['accumulation_investment']},
                             {row['financial_status']},
                             {row['client_id']}
-                          )"""
+                        )"""
         cursor.execute(query)
-
+        print(".", end="")
+    print()
 
     cursor.close()
+    conn.commit()
     conn.close()
+
+if __name__ == "__main__":
+    num = int(sys.argv[1]) if len(sys.argv) > 1 else 5000
+    start_table_insert(num)
