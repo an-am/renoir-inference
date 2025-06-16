@@ -4060,7 +4060,6 @@ dependencies = [
  "burn-import",
  "burn-ndarray",
  "console-subscriber",
- "dotenvy",
  "flume",
  "futures",
  "postgres",

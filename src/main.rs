@@ -14,7 +14,7 @@ use sqlx::{
 
 use std::{
     sync::{atomic::AtomicUsize, OnceLock},
-    time::{Duration, Instant},
+    time::Instant,
 };
 
 const MAX_REQUEST: i32 = 1000;
