@@ -1,7 +1,7 @@
 # Distributed Real-Time Inference pipeline using Renoir in Rust
 
 Renoir is a **distributed data processing platform**, 
-based on the **dataflow paradigm**, that provides an ergonomic programming interface, similar to that of Apache Flink, but has **much better performance** characteristics.
+based on the **dataflow paradigm**, that provides an ergonomic programming interface, similar to that of Apache Flink, but has **much better performance** characteristics. More infos on Renoir [here](https://databrush.it/renoir/overview/)
 
 Input is sourced from a **PostgreSQL database**, which holds personal and financial data
 of users (from now, clients). The system must listen for insertions in a DB table on a
